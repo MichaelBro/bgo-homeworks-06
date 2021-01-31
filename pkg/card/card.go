@@ -3,8 +3,9 @@ package card
 import "sort"
 
 type Transaction struct {
-	Id     int64
-	Amount int64
+	Id        int64
+	Amount    int64
+	Timestamp int64
 }
 
 func Sort(transactions []Transaction) []Transaction {
