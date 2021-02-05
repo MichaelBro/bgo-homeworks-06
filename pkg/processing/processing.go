@@ -4,55 +4,74 @@ import (
 	"bgo-homeworks-06/pkg/card"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 )
 
-type SumByMonth struct {
-	MonthNumber  int
-	MonthName    string
-	SumByMonth   int
-	Transactions []card.Transaction
-}
-
 type Months struct {
-	SumByMonthsList []SumByMonth
+	List map[string][]card.Transaction
 }
 
-func (list *SumByMonth) AddTransaction(item card.Transaction) []card.Transaction {
-	list.Transactions = append(list.Transactions, item)
-	return list.Transactions
+func NewList() *Months {
+	return &Months{
+		List: make(map[string][]card.Transaction),
+	}
 }
 
-func (list *Months) AddMonth(item SumByMonth) []SumByMonth {
-	list.SumByMonthsList = append(list.SumByMonthsList, item)
-	return list.SumByMonthsList
-}
-
-func GetSumByMonthList(transactions []card.Transaction, startDate, endDate string) ([]Months, error) {
-
+func (m *Months) GetSumByMonthsList(transactions []card.Transaction, startDate, endDate string) error {
 	startDateTime, endDateTime, errorPrepare := getPrepareDate(startDate, endDate)
-
 	if errorPrepare != nil {
-		return nil, errorPrepare
+		return errorPrepare
 	}
 
-	months := make(map[int64]string)
+	m.createListMonths(startDateTime, endDateTime)
+	m.distributionOfTransactionsByMonths(transactions, startDateTime.Unix(), endDateTime.Unix())
+	m.showSumConcurrently()
+	return nil
+}
+
+func (m *Months) distributionOfTransactionsByMonths(transactions []card.Transaction, start int64, end int64) *Months {
+	for _, transaction := range transactions {
+		timestamp := transaction.Timestamp
+		if timestamp >= start && timestamp <= end {
+			date := time.Unix(timestamp, 0).Format("2006-01")
+			m.List[date] = append(m.List[date], transaction)
+		}
+	}
+	return m
+}
+
+func (m *Months) createListMonths(startDateTime, endDateTime time.Time) map[string][]card.Transaction {
 	next := startDateTime
 	for next.Before(endDateTime) {
-		months[next.Unix()] = next.Month().String()
-		//months = append(months, next.Unix())
+		m.List[next.Format("2006-01")] = nil
 		next = next.AddDate(0, 1, 0)
 	}
+	return m.List
+}
 
-	fmt.Println(months)
+func (m *Months) showSumConcurrently() {
+	wg := sync.WaitGroup{}
+	wg.Add(len(m.List))
 
-	//for _, transaction := range transactions {
-	//	if transaction.Timestamp >= startDateTime.Unix() && transaction.Timestamp <= endDateTime.Unix() {
-	//
-	//	}
-	//}
+	for s, t := range m.List {
+		str := s
+		trn := t
+		go func() {
+			sum := sumTransactionsByMonth(trn)
+			fmt.Println("Sum by:", str, "Amount:", sum)
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+}
 
-	return nil, nil
+func sumTransactionsByMonth(transactions []card.Transaction) int64 {
+	sum := int64(0)
+	for _, transaction := range transactions {
+		sum += transaction.Amount
+	}
+	return sum
 }
 
 var (
@@ -71,6 +90,7 @@ func getPrepareDate(startDate, endDate string) (startDateTime, endDateTime time.
 	if err != nil {
 		return time.Time{}, time.Time{}, err
 	}
+	endDateTime = endDateTime.AddDate(0, 0, 1).Add(-time.Second) // need time 2020-07-31 23:59:59
 
 	if startDateTime.Unix() > endDateTime.Unix() {
 		return time.Time{}, time.Time{}, ErrIncorrectDate
