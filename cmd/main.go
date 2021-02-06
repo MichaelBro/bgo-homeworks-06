@@ -1,8 +1,8 @@
 package main
 
 import (
-	"bgo-homeworks-06/pkg/card"
-	"bgo-homeworks-06/pkg/processing"
+	"github.com/MichaelBro/bgo-homeworks-06/pkg/card"
+	"github.com/MichaelBro/bgo-homeworks-06/pkg/processing"
 )
 
 func main() {

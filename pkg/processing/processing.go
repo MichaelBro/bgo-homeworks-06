@@ -1,9 +1,9 @@
 package processing
 
 import (
-	"bgo-homeworks-06/pkg/card"
 	"errors"
 	"fmt"
+	"github.com/MichaelBro/bgo-homeworks-06/pkg/card"
 	"sync"
 	"time"
 )
